@@ -11,13 +11,13 @@ from typing import Mapping
 FIELDS = ("vcc", "r1", "r2", "rc", "re", "beta", "vbe")
 
 LABELS = {
-    "vcc": "VCC (V)",
-    "r1": "R1 (Ω)",
-    "r2": "R2 (Ω)",
-    "rc": "RC (Ω)",
-    "re": "RE (Ω)",
-    "beta": "beta (β)",
-    "vbe": "VBE (V)",
+    "vcc": "VCC (Supply Voltage)",
+    "r1": "R1 (Upper Divider)",
+    "r2": "R2 (Lower Divider)",
+    "rc": "RC (Collector Resistor)",
+    "re": "RE (Emitter Resistor)",
+    "beta": "beta (Current Gain)",
+    "vbe": "VBE (Base-Emitter Voltage)",
 }
 
 _RESISTORS = ("r1", "r2", "rc", "re")

@@ -54,3 +54,19 @@ class BiasPageTest(unittest.TestCase):
     def test_page_links_stylesheet(self):
         text = self.client.get("/").get_data(as_text=True)
         self.assertIn("/static/style.css", text)
+
+    def test_get_shows_three_panel_layout(self):
+        text = self.client.get("/").get_data(as_text=True)
+        for marker in ("Input Parameters", "Circuit", "DC Bias Results", "<svg"):
+            self.assertIn(marker, text)
+
+    def test_valid_result_shows_status_banner(self):
+        text = self.client.post("/", data=VALID).get_data(as_text=True)
+        self.assertIn("transistor in active region", text)
+
+    def test_saturation_page_shows_saturation_banner(self):
+        data = {**VALID, "r1": "10000", "r2": "10000",
+                "rc": "1000", "re": "100", "beta": "100"}
+        text = self.client.post("/", data=data).get_data(as_text=True)
+        self.assertIn("SATURATION", text)
+        self.assertIn("transistor in saturation", text)

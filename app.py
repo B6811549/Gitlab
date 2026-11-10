@@ -13,12 +13,22 @@ app = Flask(__name__)
 
 DEFAULTS = {
     "vcc": "12",
-    "r1": "47000",
-    "r2": "10000",
+    "r1": "100000",
+    "r2": "22000",
     "rc": "2200",
-    "re": "470",
-    "beta": "150",
+    "re": "1000",
+    "beta": "100",
     "vbe": "0.7",
+}
+
+UNITS = {
+    "vcc": "V",
+    "r1": "Ω",
+    "r2": "Ω",
+    "rc": "Ω",
+    "re": "Ω",
+    "beta": "–",
+    "vbe": "V",
 }
 
 FIELDS = [(field, bjt.LABELS[field]) for field in bjt.FIELDS]
@@ -43,7 +53,8 @@ def format_voltage(volts):
 @app.get("/")
 def index():
     return render_template("index.html", fields=FIELDS, form=DEFAULTS,
-                           errors={}, result=None)
+                           errors={}, result=None, units=UNITS,
+                           vce_sat=bjt.VCE_SAT)
 
 
 @app.post("/")
@@ -53,7 +64,8 @@ def calculate():
 
     if errors:
         return render_template("index.html", fields=FIELDS, form=form,
-                               errors=errors, result=None), 400
+                               errors=errors, result=None, units=UNITS,
+                               vce_sat=bjt.VCE_SAT), 400
 
     result = bjt.analyze_ce_bias(**values)
     independent = bjt.solve_nodal(**values)
@@ -68,6 +80,8 @@ def calculate():
         independent=independent,
         difference=difference,
         agrees=difference <= bjt.CHECK_TOLERANCE,
+        units=UNITS,
+        vce_sat=bjt.VCE_SAT,
     )
 
 
