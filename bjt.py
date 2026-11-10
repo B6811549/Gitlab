@@ -124,3 +124,64 @@ def analyze_ce_bias(*, vcc, r1, r2, rc, re, beta, vbe) -> BiasResult:
     warnings = (SATURATION_WARNING,) if region == "saturation" else ()
     point = OperatingPoint(ib, ic, ie, vb, vc, ve, vce)
     return BiasResult(point, region, warnings)
+
+
+CHECK_TOLERANCE = 1e-6
+
+
+def _solve_linear_system(a, b):
+    """Gaussian elimination with partial pivoting; returns the solution."""
+    n = len(b)
+    a = [row[:] for row in a]
+    b = b[:]
+
+    for col in range(n):
+        pivot = max(range(col, n), key=lambda row: abs(a[row][col]))
+        if abs(a[pivot][col]) < 1e-15:
+            raise ValueError("singular system")
+        if pivot != col:
+            a[col], a[pivot] = a[pivot], a[col]
+            b[col], b[pivot] = b[pivot], b[col]
+        for row in range(col + 1, n):
+            factor = a[row][col] / a[col][col]
+            for k in range(col, n):
+                a[row][k] -= factor * a[col][k]
+            b[row] -= factor * b[col]
+
+    x = [0.0] * n
+    for row in range(n - 1, -1, -1):
+        total = b[row] - sum(a[row][k] * x[k] for k in range(row + 1, n))
+        x[row] = total / a[row][row]
+    return x
+
+
+def solve_nodal(*, vcc, r1, r2, rc, re, beta, vbe) -> OperatingPoint:
+    """Independent check: solve the same circuit by nodal analysis.
+
+    Unknowns are ``[VB, VC, VE, IB]``; the system is KCL at each node plus
+    the base-emitter voltage-source constraint.
+    """
+    vbb = vcc * r2 / (r1 + r2)
+    if vbb <= vbe:
+        return _cutoff_point(vcc, vbb)
+
+    a = [
+        [1 / r1 + 1 / r2, 0.0, 0.0, 1.0],
+        [0.0, 1 / rc, 0.0, beta],
+        [0.0, 0.0, 1 / re, -(beta + 1)],
+        [1.0, 0.0, -1.0, 0.0],
+    ]
+    b = [vcc / r1, vcc / rc, 0.0, vbe]
+
+    vb, vc, ve, ib = _solve_linear_system(a, b)
+    return OperatingPoint(ib, beta * ib, (beta + 1) * ib,
+                          vb, vc, ve, vc - ve)
+
+
+def compare_operating_points(a: OperatingPoint, b: OperatingPoint) -> float:
+    """Largest relative difference across IB, IC and VCE."""
+    worst = 0.0
+    for x, y in ((a.ib_a, b.ib_a), (a.ic_a, b.ic_a), (a.vce_v, b.vce_v)):
+        scale = max(abs(x), abs(y), 1e-12)
+        worst = max(worst, abs(x - y) / scale)
+    return worst

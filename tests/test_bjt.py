@@ -1,7 +1,8 @@
 import math
 import unittest
 
-from bjt import (FIELDS, VCE_SAT, analyze_ce_bias, classify_region,
+from bjt import (FIELDS, VCE_SAT, OperatingPoint, analyze_ce_bias,
+                 classify_region, compare_operating_points, solve_nodal,
                  validate_inputs)
 
 
@@ -95,3 +96,32 @@ class PrimaryAnalysisTest(unittest.TestCase):
         self.assertEqual(classify_region(-1e-9, 12.0), "cutoff")
         self.assertEqual(classify_region(1e-3, VCE_SAT), "saturation")
         self.assertEqual(classify_region(1e-3, VCE_SAT + 0.01), "active")
+
+class NodalCheckTest(unittest.TestCase):
+    def test_nodal_matches_known_point(self):
+        p = solve_nodal(vcc=12, r1=47000, r2=10000, rc=2200,
+                        re=470, beta=150, vbe=0.7)
+        self.assertAlmostEqual(p.ib_a, 1.77397243587898e-5, places=12)
+        self.assertAlmostEqual(p.vce_v, 4.886902723856055, places=9)
+
+    def test_methods_agree_across_grid(self):
+        for vcc in (5, 12, 24):
+            for beta in (50, 150, 400):
+                for rc in (470, 2200, 10000):
+                    kwargs = dict(vcc=vcc, r1=47000, r2=10000, rc=rc,
+                                  re=470, beta=beta, vbe=0.7)
+                    primary = analyze_ce_bias(**kwargs)
+                    nodal = solve_nodal(**kwargs)
+                    self.assertLess(
+                        compare_operating_points(primary.point, nodal), 1e-6)
+
+    def test_nodal_handles_cutoff(self):
+        p = solve_nodal(vcc=12, r1=20000, r2=1000, rc=1000,
+                        re=100, beta=100, vbe=0.7)
+        self.assertEqual(p.ib_a, 0.0)
+        self.assertAlmostEqual(p.vce_v, 12.0)
+
+    def test_compare_reports_real_difference(self):
+        a = OperatingPoint(1e-5, 2e-3, 2.01e-3, 2.0, 6.0, 1.0, 5.0)
+        b = OperatingPoint(1e-5, 2.02e-3, 2.03e-3, 2.0, 6.0, 1.0, 5.0)
+        self.assertAlmostEqual(compare_operating_points(a, b), 0.00990099, places=6)
