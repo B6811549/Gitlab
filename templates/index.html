@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ENG29 2121 — BJT Common-Emitter DC Bias</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main>
+  <h1>ENG29 2121 — Common-Emitter DC Bias</h1>
+  <p class="subtitle">
+    คำนวณจุดทำงานดีซีของวงจรไบอัสแบบ voltage divider และตรวจสอบด้วยวิธี nodal
+  </p>
+
+  <form method="post" action="/">
+    <div class="grid">
+      {% for field, label in fields %}
+        <div class="field">
+          <label for="{{ field }}">{{ label }}</label>
+          <input id="{{ field }}" name="{{ field }}" type="text"
+                 inputmode="decimal" value="{{ form.get(field, '') }}">
+          {% if errors.get(field) %}
+            <p class="error">{{ errors[field] }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    <button type="submit">คำนวณ</button>
+  </form>
+
+  {% if result %}
+    <section class="result">
+      <p class="region {{ result.region }}">{{ result.region|upper }}</p>
+
+      {% for warning in result.warnings %}
+        <p class="warning">{{ warning }}</p>
+      {% endfor %}
+
+      <table>
+        <tbody>
+          <tr><th>IB</th><td>{{ result.point.ib_a|current }}</td></tr>
+          <tr><th>IC</th><td>{{ result.point.ic_a|current }}</td></tr>
+          <tr><th>IE</th><td>{{ result.point.ie_a|current }}</td></tr>
+          <tr><th>VB</th><td>{{ result.point.vb_v|voltage }}</td></tr>
+          <tr><th>VC</th><td>{{ result.point.vc_v|voltage }}</td></tr>
+          <tr><th>VE</th><td>{{ result.point.ve_v|voltage }}</td></tr>
+          <tr><th>VCE</th><td>{{ result.point.vce_v|voltage }}</td></tr>
+        </tbody>
+      </table>
+
+      <h2>ตรวจสอบข้ามวิธี (nodal solution อิสระ)</h2>
+      <table>
+        <tbody>
+          <tr><th>IB</th><td>{{ independent.ib_a|current }}</td></tr>
+          <tr><th>IC</th><td>{{ independent.ic_a|current }}</td></tr>
+          <tr><th>VCE</th><td>{{ independent.vce_v|voltage }}</td></tr>
+        </tbody>
+      </table>
+      <p class="check">
+        ผลต่างสูงสุด {{ '%.6f'|format(difference * 100) }}%
+        {% if agrees %}
+          <span class="ok">ตรงกัน</span>
+        {% else %}
+          <span class="bad">ไม่ตรงกัน</span>
+        {% endif %}
+      </p>
+    </section>
+  {% endif %}
+</main>
+</body>
+</html>
