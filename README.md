@@ -20,3 +20,26 @@ Automated Ohm’s Law Solver
 Interactive Physics & Circuit Learning Toolkit
 
 คำอธิบาย: ชุดสื่อการเรียนรู้ดิจิทัลเรื่องวงจรไฟฟ้าเบื้องต้น ประกอบด้วยเครื่องมือคำนวณกระแส กำลังไฟฟ้า และคำถามทบทวนความเข้าใจ ช่วยให้นักเรียนเห็นภาพการไหลของกระแสไฟฟ้าในวงจรตัวต้านทานได้ชัดเจนยิ่งขึ้น
+
+## BJT Common-Emitter DC Bias (ENG29 2121)
+
+เว็บแอป Flask หน้าเดียวสำหรับคำนวณจุดทำงานดีซีของวงจรไบอัสแบบ voltage
+divider (NPN common-emitter) พร้อมตรวจสอบผลด้วยวิธี nodal analysis ที่
+derive แยกจากสูตรตำรา และเตือนเมื่อวงจรอยู่ในย่าน cutoff หรือ saturation
+
+- อินพุต: VCC, R1, R2, RC, RE, beta, VBE
+- เอาต์พุต: IB, IC, IE, VB, VC, VE, VCE พร้อมหน่วย และผลต่างระหว่างสองวิธี
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python -m pip install -r requirements.txt
+.\.venv\Scripts\python app.py
+```
+
+เปิด `http://127.0.0.1:5000` แล้วกด "คำนวณ"
+
+รันเทสทั้งหมด:
+
+```powershell
+.\.venv\Scripts\python -m pytest
+```

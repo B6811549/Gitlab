@@ -45,3 +45,12 @@ class BiasPageTest(unittest.TestCase):
         text = resp.get_data(as_text=True)
         self.assertIn("CUTOFF", text)
         self.assertIn("0.000 A", text)
+
+    def test_stylesheet_served(self):
+        resp = self.client.get("/static/style.css")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("text/css", resp.content_type)
+
+    def test_page_links_stylesheet(self):
+        text = self.client.get("/").get_data(as_text=True)
+        self.assertIn("/static/style.css", text)
