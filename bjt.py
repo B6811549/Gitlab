@@ -4,6 +4,7 @@ Pure functions only: no Flask, no HTML, no I/O.
 """
 
 import math
+from dataclasses import dataclass
 from typing import Mapping
 
 
@@ -20,6 +21,14 @@ LABELS = {
 }
 
 _RESISTORS = ("r1", "r2", "rc", "re")
+
+VCE_SAT = 0.2
+
+CUTOFF_WARNING = "Cutoff: ไบอัสฐาน-อิมิตเตอร์ไม่ forward (IB ≤ 0)"
+SATURATION_WARNING = (
+    "Saturation: VCE ที่คำนวณได้ ≤ VCE(sat) = 0.2 V "
+    "โมเดลย่าน active ใช้ไม่ได้แล้ว"
+)
 
 
 def _symbol(field):
@@ -63,3 +72,55 @@ def validate_inputs(raw: Mapping[str, str]):
             errors["vbe"] = "VBE ต้องอยู่ระหว่าง 0 V กับ VCC"
 
     return values, errors
+
+
+@dataclass(frozen=True)
+class OperatingPoint:
+    ib_a: float
+    ic_a: float
+    ie_a: float
+    vb_v: float
+    vc_v: float
+    ve_v: float
+    vce_v: float
+
+
+@dataclass(frozen=True)
+class BiasResult:
+    point: OperatingPoint
+    region: str
+    warnings: tuple[str, ...]
+
+
+def classify_region(ib_a: float, vce_v: float) -> str:
+    if ib_a <= 0:
+        return "cutoff"
+    if vce_v <= VCE_SAT:
+        return "saturation"
+    return "active"
+
+
+def _cutoff_point(vcc: float, vbb: float) -> OperatingPoint:
+    return OperatingPoint(0.0, 0.0, 0.0, vbb, vcc, 0.0, vcc)
+
+
+def analyze_ce_bias(*, vcc, r1, r2, rc, re, beta, vbe) -> BiasResult:
+    """Voltage-divider bias analysed with the textbook Thevenin method."""
+    vbb = vcc * r2 / (r1 + r2)
+    rb = r1 * r2 / (r1 + r2)
+
+    if vbb <= vbe:
+        return BiasResult(_cutoff_point(vcc, vbb), "cutoff", (CUTOFF_WARNING,))
+
+    ib = (vbb - vbe) / (rb + (beta + 1) * re)
+    ic = beta * ib
+    ie = (beta + 1) * ib
+    vb = vbb - ib * rb
+    vc = vcc - ic * rc
+    ve = ie * re
+    vce = vc - ve
+
+    region = classify_region(ib, vce)
+    warnings = (SATURATION_WARNING,) if region == "saturation" else ()
+    point = OperatingPoint(ib, ic, ie, vb, vc, ve, vce)
+    return BiasResult(point, region, warnings)
