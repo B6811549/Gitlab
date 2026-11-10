@@ -106,8 +106,8 @@ def _cutoff_point(vcc: float, vbb: float) -> OperatingPoint:
 
 def analyze_ce_bias(*, vcc, r1, r2, rc, re, beta, vbe) -> BiasResult:
     """Voltage-divider bias analysed with the textbook Thevenin method."""
-    vbb = vcc * r2 / (r1 + r2)
-    rb = r1 * r2 / (r1 + r2)
+    vbb = vcc / (1 + r1 / r2)
+    rb = 1 / (1 / r1 + 1 / r2)
 
     if vbb <= vbe:
         return BiasResult(_cutoff_point(vcc, vbb), "cutoff", (CUTOFF_WARNING,))
@@ -137,7 +137,7 @@ def _solve_linear_system(a, b):
 
     for col in range(n):
         pivot = max(range(col, n), key=lambda row: abs(a[row][col]))
-        if abs(a[pivot][col]) < 1e-15:
+        if a[pivot][col] == 0.0:
             raise ValueError("singular system")
         if pivot != col:
             a[col], a[pivot] = a[pivot], a[col]
@@ -161,7 +161,7 @@ def solve_nodal(*, vcc, r1, r2, rc, re, beta, vbe) -> OperatingPoint:
     Unknowns are ``[VB, VC, VE, IB]``; the system is KCL at each node plus
     the base-emitter voltage-source constraint.
     """
-    vbb = vcc * r2 / (r1 + r2)
+    vbb = vcc / (1 + r1 / r2)
     if vbb <= vbe:
         return _cutoff_point(vcc, vbb)
 
@@ -179,9 +179,15 @@ def solve_nodal(*, vcc, r1, r2, rc, re, beta, vbe) -> OperatingPoint:
 
 
 def compare_operating_points(a: OperatingPoint, b: OperatingPoint) -> float:
-    """Largest relative difference across IB, IC and VCE."""
+    """Largest relative difference across IB, IC and VCE.
+
+    Returns ``math.inf`` when either value is not finite, so a broken solve
+    can never be reported as agreement.
+    """
     worst = 0.0
     for x, y in ((a.ib_a, b.ib_a), (a.ic_a, b.ic_a), (a.vce_v, b.vce_v)):
+        if not (math.isfinite(x) and math.isfinite(y)):
+            return math.inf
         scale = max(abs(x), abs(y), 1e-12)
         worst = max(worst, abs(x - y) / scale)
     return worst

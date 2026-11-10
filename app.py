@@ -4,6 +4,9 @@ This module only parses the form, calls the engineering functions in
 ``bjt``, and renders the page.
 """
 
+import math
+from dataclasses import astuple
+
 from flask import Flask, render_template, request
 
 import bjt
@@ -32,6 +35,16 @@ UNITS = {
 }
 
 FIELDS = [(field, bjt.LABELS[field]) for field in bjt.FIELDS]
+
+
+def _is_finite(point):
+    return all(math.isfinite(value) for value in astuple(point))
+
+
+def _render_error(form, message):
+    return render_template("index.html", fields=FIELDS, form=form,
+                           errors={"_form": message}, result=None,
+                           units=UNITS, vce_sat=bjt.VCE_SAT), 400
 
 
 @app.template_filter("current")
@@ -67,8 +80,17 @@ def calculate():
                                errors=errors, result=None, units=UNITS,
                                vce_sat=bjt.VCE_SAT), 400
 
-    result = bjt.analyze_ce_bias(**values)
-    independent = bjt.solve_nodal(**values)
+    try:
+        result = bjt.analyze_ce_bias(**values)
+        independent = bjt.solve_nodal(**values)
+    except (ValueError, ZeroDivisionError, OverflowError):
+        return _render_error(
+            form, "ผลลัพธ์เกินขอบเขตที่คำนวณได้ กรุณาลดขนาดค่าอินพุต")
+
+    if not (_is_finite(result.point) and _is_finite(independent)):
+        return _render_error(
+            form, "ผลลัพธ์เกินขอบเขตที่คำนวณได้ กรุณาลดขนาดค่าอินพุต")
+
     difference = bjt.compare_operating_points(result.point, independent)
 
     return render_template(

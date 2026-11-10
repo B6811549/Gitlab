@@ -1,5 +1,6 @@
 import math
 import unittest
+from dataclasses import astuple
 
 from bjt import (FIELDS, VCE_SAT, OperatingPoint, analyze_ce_bias,
                  classify_region, compare_operating_points, solve_nodal,
@@ -125,3 +126,24 @@ class NodalCheckTest(unittest.TestCase):
         a = OperatingPoint(1e-5, 2e-3, 2.01e-3, 2.0, 6.0, 1.0, 5.0)
         b = OperatingPoint(1e-5, 2.02e-3, 2.03e-3, 2.0, 6.0, 1.0, 5.0)
         self.assertAlmostEqual(compare_operating_points(a, b), 0.00990099, places=6)
+
+    def test_cutoff_boundary_is_inclusive(self):
+        vcc, r1, r2 = 12, 47000, 10000
+        vbb = vcc / (1 + r1 / r2)
+        active = analyze_ce_bias(vcc=vcc, r1=r1, r2=r2, rc=2200, re=470,
+                                 beta=150, vbe=vbb - 1e-12)
+        self.assertEqual(active.region, "active")
+        self.assertGreater(active.point.ib_a, 0.0)
+        cutoff = analyze_ce_bias(vcc=vcc, r1=r1, r2=r2, rc=2200, re=470,
+                                 beta=150, vbe=vbb + 1e-12)
+        self.assertEqual(cutoff.region, "cutoff")
+
+    def test_extreme_but_valid_resistors_stay_finite(self):
+        r = analyze_ce_bias(vcc=12, r1=1e308, r2=1e308, rc=2200,
+                            re=470, beta=150, vbe=0.7)
+        self.assertTrue(all(math.isfinite(v) for v in astuple(r.point)))
+
+    def test_nodal_handles_tiny_conductance(self):
+        p = solve_nodal(vcc=12, r1=47000, r2=10000, rc=1e16,
+                        re=470, beta=150, vbe=0.7)
+        self.assertTrue(all(math.isfinite(v) for v in astuple(p)))

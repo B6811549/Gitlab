@@ -70,3 +70,15 @@ class BiasPageTest(unittest.TestCase):
         text = self.client.post("/", data=data).get_data(as_text=True)
         self.assertIn("SATURATION", text)
         self.assertIn("transistor in saturation", text)
+
+    def test_overflowing_input_returns_400_with_message(self):
+        data = {**VALID, "beta": "1e308", "rc": "1e308", "re": "0.001"}
+        resp = self.client.post("/", data=data)
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("เกินขอบเขต", resp.get_data(as_text=True))
+
+    def test_extreme_resistors_render_finite_values(self):
+        data = {**VALID, "r1": "1e308", "r2": "1e308"}
+        resp = self.client.post("/", data=data)
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn("nan", resp.get_data(as_text=True).lower())

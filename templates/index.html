@@ -38,6 +38,9 @@
             {% endif %}
           </div>
         {% endfor %}
+        {% if errors.get("_form") %}
+          <p class="form-error" role="alert">{{ errors["_form"] }}</p>
+        {% endif %}
         <button type="submit">คำนวณ DC Bias</button>
       </form>
     </section>
