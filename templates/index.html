@@ -11,115 +11,183 @@
 
   <header class="topbar">
     <div class="brand">
-      <span class="brand-icon" aria-hidden="true">⚡</span>
+      <span class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+             stroke-linecap="round" stroke-linejoin="round">
+          <rect x="7" y="7" width="10" height="10" rx="1.5"/>
+          <path d="M9 3v4M12 3v4M15 3v4M9 17v4M12 17v4M15 17v4
+                   M3 9h4M3 12h4M3 15h4M17 9h4M17 12h4M17 15h4"/>
+          <rect x="10" y="10" width="4" height="4" rx="0.6"/>
+        </svg>
+      </span>
       <div>
         <h1>Lab 02: BJT DC Bias Web App</h1>
-        <p>ENG29 2121 — Common Emitter (Voltage Divider Bias)</p>
+        <p>ENG29 2121 – Common Emitter (Voltage Divider Bias)</p>
       </div>
     </div>
-    <span class="course">Computer Programming for Electrical Engineers</span>
+    <span class="course">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M8 6l-5 6 5 6M16 6l5 6-5 6"/>
+      </svg>
+      <span>Computer Programming for<br>Electrical Engineers</span>
+    </span>
   </header>
 
   <main class="layout">
 
     <section class="card">
-      <h2><span class="ico" aria-hidden="true">⚙</span> Input Parameters</h2>
-      <form method="post" action="/">
-        {% for field, label in fields %}
+      <h2>
+        <span class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06
+                     a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09
+                     A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83
+                     l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09
+                     A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83
+                     l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09
+                     a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83
+                     l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09
+                     a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </span>
+        Input Parameters
+      </h2>
+
+      <form method="post" action="{{ url_for('calculate') }}">
+        {% for field in fields %}
           <div class="field-row">
-            <label for="{{ field }}">{{ label }}</label>
+            <label for="{{ field.name }}">
+              <span class="symbol">{{ field.symbol|safe }}</span>
+              <span class="caption">({{ field.caption }})</span>
+            </label>
             <div class="control">
-              <input id="{{ field }}" name="{{ field }}" type="text"
-                     inputmode="decimal" value="{{ form.get(field, '') }}">
-              <span class="unit">{{ units[field] }}</span>
+              <input id="{{ field.name }}" name="{{ field.name }}" type="text"
+                     inputmode="decimal" value="{{ form.get(field.name, '') }}"
+                     {% if errors.get(field.name) %}aria-describedby="{{ field.name }}-error"{% endif %}>
+              <select name="{{ field.name }}_unit" aria-label="{{ field.caption }} unit">
+                {% for unit in field.units %}
+                  <option value="{{ unit }}"
+                    {% if units[field.name] == unit %}selected{% endif %}>{{ unit }}</option>
+                {% endfor %}
+              </select>
             </div>
-            {% if errors.get(field) %}
-              <p class="error">{{ errors[field] }}</p>
+            {% if errors.get(field.name) %}
+              <p class="error" id="{{ field.name }}-error">{{ errors[field.name] }}</p>
             {% endif %}
           </div>
         {% endfor %}
+
         {% if errors.get("_form") %}
           <p class="form-error" role="alert">{{ errors["_form"] }}</p>
         {% endif %}
-        <button type="submit">คำนวณ DC Bias</button>
+
+        <button type="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="4" y="3" width="16" height="18" rx="2"/>
+            <path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M16 15h0M8 19h2M12 19h2M16 19h0"/>
+          </svg>
+          Calculate DC Bias
+        </button>
       </form>
     </section>
 
     <section class="card">
-      <h2><span class="ico" aria-hidden="true">🔌</span> Circuit: Common-Emitter Amplifier</h2>
+      <h2>
+        <span class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="6" cy="12" r="2.2"/>
+            <circle cx="18" cy="6" r="2.2"/>
+            <circle cx="18" cy="18" r="2.2"/>
+            <path d="M8 11l8-4M8 13l8 4"/>
+          </svg>
+        </span>
+        Circuit: Common-Emitter Amplifier
+      </h2>
+
       <svg class="schematic" viewBox="0 0 360 400" role="img"
            aria-label="วงจร common-emitter bias">
         <!-- supply rail -->
-        <line x1="100" y1="60" x2="240" y2="60" class="wire"/>
-        <line x1="100" y1="60" x2="100" y2="80" class="wire"/>
-        <line x1="240" y1="60" x2="240" y2="80" class="wire"/>
-        <text x="170" y="38" class="node" text-anchor="middle">V<tspan class="sub">CC</tspan></text>
-        <text x="170" y="54" class="value" text-anchor="middle">{{ form.vcc }} V</text>
+        <line x1="110" y1="70" x2="250" y2="70" class="wire"/>
+        <circle cx="180" cy="70" r="3.5" class="node-dot"/>
+        <text x="192" y="52" class="node-label">V<tspan baseline-shift="sub" font-size="0.7em">CC</tspan> = {{ form.vcc }} {{ units.vcc }}</text>
 
         <!-- R1 -->
-        <rect x="92" y="80" width="16" height="52" class="res"/>
-        <text x="34" y="102" class="part">R1</text>
-        <text x="34" y="118" class="value">{{ form.r1 }} Ω</text>
-        <line x1="100" y1="132" x2="100" y2="190" class="wire"/>
+        <line x1="110" y1="70" x2="110" y2="95" class="wire"/>
+        <rect x="102" y="95" width="16" height="55" class="res"/>
+        <text x="34" y="112" class="part">R<tspan baseline-shift="sub" font-size="0.7em">1</tspan></text>
+        <text x="34" y="128" class="value">{{ form.r1 }} {{ units.r1 }}</text>
+        <line x1="110" y1="150" x2="110" y2="235" class="wire"/>
 
-        <!-- R2 -->
-        <rect x="92" y="238" width="16" height="52" class="res"/>
-        <text x="34" y="260" class="part">R2</text>
-        <text x="34" y="276" class="value">{{ form.r2 }} Ω</text>
-        <line x1="100" y1="190" x2="100" y2="238" class="wire"/>
-        <line x1="100" y1="290" x2="100" y2="330" class="wire"/>
-        <line x1="84" y1="330" x2="116" y2="330" class="wire"/>
-        <line x1="90" y1="336" x2="110" y2="336" class="wire"/>
-        <line x1="96" y1="342" x2="104" y2="342" class="wire"/>
+        <!-- base node and R2 -->
+        <circle cx="110" cy="235" r="3.5" class="node-dot"/>
+        <line x1="110" y1="235" x2="110" y2="270" class="wire"/>
+        <rect x="102" y="270" width="16" height="55" class="res"/>
+        <text x="34" y="287" class="part">R<tspan baseline-shift="sub" font-size="0.7em">2</tspan></text>
+        <text x="34" y="303" class="value">{{ form.r2 }} {{ units.r2 }}</text>
+        <line x1="110" y1="325" x2="110" y2="355" class="wire"/>
+        <line x1="92" y1="355" x2="128" y2="355" class="wire"/>
+        <line x1="99" y1="361" x2="121" y2="361" class="wire"/>
+        <line x1="105" y1="367" x2="115" y2="367" class="wire"/>
 
         <!-- RC -->
-        <rect x="232" y="80" width="16" height="52" class="res"/>
-        <text x="258" y="102" class="part">RC</text>
-        <text x="258" y="118" class="value">{{ form.rc }} Ω</text>
-        <line x1="240" y1="132" x2="240" y2="160" class="wire"/>
-        <line x1="240" y1="160" x2="200" y2="160" class="wire"/>
-        <line x1="200" y1="160" x2="166" y2="178" class="wire"/>
+        <line x1="250" y1="70" x2="250" y2="95" class="wire"/>
+        <rect x="242" y="95" width="16" height="55" class="res"/>
+        <text x="268" y="112" class="part">R<tspan baseline-shift="sub" font-size="0.7em">C</tspan></text>
+        <text x="268" y="128" class="value">{{ form.rc }} {{ units.rc }}</text>
+        <line x1="250" y1="150" x2="250" y2="190" class="wire"/>
+        <line x1="250" y1="190" x2="205" y2="190" class="wire"/>
+        <line x1="205" y1="190" x2="205" y2="207" class="wire"/>
 
         <!-- transistor -->
-        <circle cx="184" cy="190" r="30" class="device"/>
-        <line x1="166" y1="172" x2="166" y2="208" class="wire"/>
-        <line x1="100" y1="190" x2="166" y2="190" class="wire"/>
-        <line x1="166" y1="202" x2="200" y2="220" class="wire"/>
-        <polygon points="192,213 201,221 190,222" class="arrow"/>
-        <text x="222" y="190" class="part">Q1</text>
-        <text x="222" y="204" class="value">NPN</text>
+        <line x1="110" y1="235" x2="163" y2="235" class="wire"/>
+        <circle cx="185" cy="235" r="32" class="device"/>
+        <line x1="163" y1="215" x2="163" y2="255" class="base-bar"/>
+        <line x1="163" y1="224" x2="205" y2="207" class="wire"/>
+        <line x1="163" y1="246" x2="205" y2="263" class="wire"/>
+        <polygon points="196,255 206,264 194,266" class="arrow"/>
+        <text x="224" y="226" class="part">Q<tspan baseline-shift="sub" font-size="0.7em">1</tspan></text>
+        <text x="224" y="242" class="value">NPN</text>
+        <text x="224" y="258" class="value">(β = {{ form.beta }})</text>
 
         <!-- RE -->
-        <line x1="200" y1="220" x2="240" y2="220" class="wire"/>
-        <line x1="240" y1="220" x2="240" y2="250" class="wire"/>
-        <rect x="232" y="250" width="16" height="52" class="res"/>
-        <text x="258" y="272" class="part">RE</text>
-        <text x="258" y="288" class="value">{{ form.re }} Ω</text>
-        <line x1="240" y1="302" x2="240" y2="330" class="wire"/>
-        <line x1="224" y1="330" x2="256" y2="330" class="wire"/>
-        <line x1="230" y1="336" x2="250" y2="336" class="wire"/>
-        <line x1="236" y1="342" x2="244" y2="342" class="wire"/>
-
-        {% if result %}
-          <text x="108" y="182" class="probe">VB {{ result.point.vb_v|voltage }}</text>
-          <text x="248" y="152" class="probe">VC {{ result.point.vc_v|voltage }}</text>
-          <text x="248" y="236" class="probe">VE {{ result.point.ve_v|voltage }}</text>
-        {% endif %}
+        <line x1="205" y1="263" x2="250" y2="263" class="wire"/>
+        <line x1="250" y1="263" x2="250" y2="275" class="wire"/>
+        <rect x="242" y="275" width="16" height="55" class="res"/>
+        <text x="268" y="292" class="part">R<tspan baseline-shift="sub" font-size="0.7em">E</tspan></text>
+        <text x="268" y="308" class="value">{{ form.re }} {{ units.re }}</text>
+        <line x1="250" y1="330" x2="250" y2="355" class="wire"/>
+        <line x1="232" y1="355" x2="268" y2="355" class="wire"/>
+        <line x1="239" y1="361" x2="261" y2="361" class="wire"/>
+        <line x1="245" y1="367" x2="255" y2="367" class="wire"/>
       </svg>
     </section>
 
     <section class="card">
-      <h2><span class="ico" aria-hidden="true">📊</span> DC Bias Results</h2>
+      <h2>
+        <span class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
+          </svg>
+        </span>
+        DC Bias Results
+      </h2>
+
       {% if result %}
         <table class="results">
           <tbody>
-            <tr><th>VB</th><td>{{ result.point.vb_v|voltage }}</td></tr>
-            <tr><th>VE</th><td>{{ result.point.ve_v|voltage }}</td></tr>
-            <tr><th>VC</th><td>{{ result.point.vc_v|voltage }}</td></tr>
-            <tr><th>VCE</th><td>{{ result.point.vce_v|voltage }}</td></tr>
-            <tr><th>IB</th><td>{{ result.point.ib_a|current }}</td></tr>
-            <tr><th>IC</th><td>{{ result.point.ic_a|current }}</td></tr>
-            <tr><th>IE</th><td>{{ result.point.ie_a|current }}</td></tr>
+            <tr><th>V<sub>B</sub></th><td>{{ result.point.vb_v|voltage }}</td></tr>
+            <tr><th>V<sub>E</sub></th><td>{{ result.point.ve_v|voltage }}</td></tr>
+            <tr><th>V<sub>C</sub></th><td>{{ result.point.vc_v|voltage }}</td></tr>
+            <tr><th>V<sub>CE</sub></th><td>{{ result.point.vce_v|voltage }}</td></tr>
+            <tr><th>I<sub>B</sub></th><td>{{ result.point.ib_a|current }}</td></tr>
+            <tr><th>I<sub>C</sub></th><td>{{ result.point.ic_a|current }}</td></tr>
+            <tr><th>I<sub>E</sub></th><td>{{ result.point.ie_a|current }}</td></tr>
           </tbody>
         </table>
 
@@ -129,14 +197,16 @@
           </span>
           <div>
             {% if result.region == 'active' %}
-              <strong>ACTIVE — approximation OK</strong>
-              <p>VCE = {{ result.point.vce_v|voltage }} &gt; {{ '%.1f'|format(vce_sat) }} V (transistor in active region)</p>
+              <strong>Active region approximation OK <span class="region-tag">(ACTIVE)</span></strong>
+              <p>V<sub>CE</sub> = {{ result.point.vce_v|voltage }} &gt;
+                 {{ '%.1f'|format(vce_sat) }} V (transistor in active region)</p>
             {% elif result.region == 'saturation' %}
-              <strong>SATURATION</strong>
-              <p>VCE = {{ result.point.vce_v|voltage }} ≤ {{ '%.1f'|format(vce_sat) }} V (transistor in saturation)</p>
+              <strong>Saturation region — model limit <span class="region-tag">(SATURATION)</span></strong>
+              <p>V<sub>CE</sub> = {{ result.point.vce_v|voltage }} ≤
+                 {{ '%.1f'|format(vce_sat) }} V (transistor in saturation)</p>
             {% else %}
-              <strong>CUTOFF</strong>
-              <p>IB ≤ 0 (transistor in cutoff)</p>
+              <strong>Cutoff region — transistor off <span class="region-tag">(CUTOFF)</span></strong>
+              <p>I<sub>B</sub> ≤ 0 (transistor in cutoff)</p>
             {% endif %}
           </div>
         </div>
@@ -144,20 +214,21 @@
         {% for warning in result.warnings %}
           <p class="warning">{{ warning }}</p>
         {% endfor %}
-      {% else %}
-        <p class="placeholder">กด "คำนวณ DC Bias" เพื่อดูจุดทำงานของวงจร</p>
       {% endif %}
     </section>
 
   </main>
 
   {% if result %}
-    <section class="card crosscheck">
-      <h2><span class="ico" aria-hidden="true">✓</span> ตรวจสอบข้ามวิธี (nodal solution อิสระ)</h2>
+    <section class="crosscheck">
+      <span class="crosscheck-title">
+        <span aria-hidden="true">✓</span>
+        ตรวจสอบข้ามวิธี (nodal solution อิสระ)
+      </span>
       <div class="crosscheck-grid">
-        <div><span>IB</span><strong>{{ independent.ib_a|current }}</strong></div>
-        <div><span>IC</span><strong>{{ independent.ic_a|current }}</strong></div>
-        <div><span>VCE</span><strong>{{ independent.vce_v|voltage }}</strong></div>
+        <div><span>I<sub>B</sub></span><strong>{{ independent.ib_a|current }}</strong></div>
+        <div><span>I<sub>C</sub></span><strong>{{ independent.ic_a|current }}</strong></div>
+        <div><span>V<sub>CE</sub></span><strong>{{ independent.vce_v|voltage }}</strong></div>
         <div><span>ผลต่างสูงสุด</span><strong>{{ '%.6f'|format(difference * 100) }}%</strong></div>
         <div class="verdict">
           {% if agrees %}<span class="ok">ตรงกัน</span>{% else %}<span class="bad">ไม่ตรงกัน</span>{% endif %}

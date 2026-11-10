@@ -15,17 +15,17 @@ class BiasPageTest(unittest.TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, 200)
         text = resp.get_data(as_text=True)
-        self.assertIn("VCC", text)
-        self.assertIn("คำนวณ", text)
+        self.assertIn("Supply Voltage", text)
+        self.assertIn("Calculate DC Bias", text)
 
     def test_post_valid_shows_point_and_cross_check(self):
         resp = self.client.post("/", data=VALID)
         self.assertEqual(resp.status_code, 200)
         text = resp.get_data(as_text=True)
         self.assertIn("ACTIVE", text)
-        self.assertIn("17.740 µA", text)
-        self.assertIn("2.661 mA", text)
-        self.assertIn("4.887 V", text)
+        self.assertIn("17.7 µA", text)
+        self.assertIn("2.66 mA", text)
+        self.assertIn("4.89 V", text)
         self.assertIn("ตรวจสอบข้ามวิธี", text)
         self.assertIn("ตรงกัน", text)
 
@@ -44,7 +44,7 @@ class BiasPageTest(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         text = resp.get_data(as_text=True)
         self.assertIn("CUTOFF", text)
-        self.assertIn("0.000 A", text)
+        self.assertIn("0.0 µA", text)
 
     def test_stylesheet_served(self):
         resp = self.client.get("/static/style.css")
@@ -82,3 +82,32 @@ class BiasPageTest(unittest.TestCase):
         resp = self.client.post("/", data=data)
         self.assertEqual(resp.status_code, 200)
         self.assertNotIn("nan", resp.get_data(as_text=True).lower())
+
+    def test_kohm_units_match_physical_resistance(self):
+        data = {"vcc": "12", "r1": "100", "r1_unit": "kΩ",
+                "r2": "22", "r2_unit": "kΩ", "rc": "2.2", "rc_unit": "kΩ",
+                "re": "1.0", "re_unit": "kΩ", "beta": "100", "vbe": "0.7"}
+        text = self.client.post("/", data=data).get_data(as_text=True)
+        self.assertIn("12.3 µA", text)
+        self.assertIn("1.23 mA", text)
+        self.assertIn("8.05 V", text)
+
+    def test_missing_units_default_to_ohms(self):
+        text = self.client.post("/", data=VALID).get_data(as_text=True)
+        self.assertIn("17.7 µA", text)
+
+    def test_unknown_unit_falls_back_to_ohms(self):
+        data = {**VALID, "r1_unit": "MΩ"}
+        text = self.client.post("/", data=data).get_data(as_text=True)
+        self.assertIn("17.7 µA", text)
+
+    def test_non_numeric_with_kohm_returns_400(self):
+        data = {**VALID, "r1": "abc", "r1_unit": "kΩ"}
+        resp = self.client.post("/", data=data)
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("ต้องเป็นตัวเลข", resp.get_data(as_text=True))
+
+    def test_voltage_uses_two_decimals(self):
+        text = self.client.post("/", data=VALID).get_data(as_text=True)
+        self.assertIn("4.89 V", text)
+        self.assertNotIn("4.887 V", text)
