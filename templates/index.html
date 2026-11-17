@@ -325,23 +325,13 @@
   {% endif %}
 
   <script>
-    function mode_fields(mode) {
-      const modeMap = {
-        divider: ['vcc', 'r1', 'r2', 'rc', 're', 'beta', 'vbe'],
-        fixed: ['vcc', 'rb', 'rc', 'beta', 'vbe'],
-        emitter: ['vcc', 'rb', 'rc', 're', 'beta', 'vbe'],
-      };
-      return new Set(modeMap[mode] || modeMap.divider);
-    }
-
     function updateFieldVisibility() {
       const select = document.getElementById('bias_mode');
       if (!select) return;
-      const active = mode_fields(select.value);
+      const mode = select.value;
       document.querySelectorAll('.field-row[data-modes]').forEach(row => {
         const modes = row.getAttribute('data-modes').split(',');
-        const show = modes.some(m => active.has(m));
-        row.style.display = show ? '' : 'none';
+        row.style.display = modes.includes(mode) ? '' : 'none';
       });
     }
 
