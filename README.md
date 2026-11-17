@@ -23,23 +23,42 @@ Interactive Physics & Circuit Learning Toolkit
 
 ## BJT Common-Emitter DC Bias (ENG29 2121)
 
-เว็บแอป Flask หน้าเดียวสำหรับคำนวณจุดทำงานดีซีของวงจรไบอัสแบบ voltage
-divider (NPN common-emitter) พร้อมตรวจสอบผลด้วยวิธี nodal analysis ที่
-derive แยกจากสูตรตำรา และเตือนเมื่อวงจรอยู่ในย่าน cutoff หรือ saturation
+เว็บแอป Flask หน้าเดียวสำหรับคำนวณจุดทำงานดีซีของวงจรไบอัส NPN common-emitter
+รองรับ 3 โหมด โดยใช้สมการแยกกันใน `bjt.py` และเลือกฟังก์ชันด้วย `bias_mode`
+ใน `app.py` (ไม่ fallback เป็น Divider เมื่อโหมดไม่รู้จัก — ตอบ HTTP 400)
 
-- อินพุต: VCC, R1, R2, RC, RE, beta, VBE
-- เอาต์พุต: IB, IC, IE, VB, VC, VE, VCE พร้อมหน่วย และผลต่างระหว่างสองวิธี
+| โหมด | ค่าที่กรอก | สมการหลัก |
+|---|---|---|
+| Voltage Divider Bias | V<sub>CC</sub>, R<sub>1</sub>, R<sub>2</sub>, R<sub>C</sub>, R<sub>E</sub>, β, V<sub>BE</sub> | V<sub>TH</sub> = V<sub>CC</sub>R<sub>2</sub>/(R<sub>1</sub>+R<sub>2</sub>), R<sub>TH</sub> = R<sub>1</sub>R<sub>2</sub>/(R<sub>1</sub>+R<sub>2</sub>), I<sub>B</sub> = (V<sub>TH</sub>−V<sub>BE</sub>)/(R<sub>TH</sub>+(β+1)R<sub>E</sub>) |
+| Fixed Bias | V<sub>CC</sub>, R<sub>B</sub>, R<sub>C</sub>, β, V<sub>BE</sub> | I<sub>B</sub> = (V<sub>CC</sub>−V<sub>BE</sub>)/R<sub>B</sub>, V<sub>E</sub> = 0, V<sub>B</sub> = V<sub>BE</sub> |
+| Emitter Bias | V<sub>CC</sub>, R<sub>B</sub>, R<sub>C</sub>, R<sub>E</sub>, β, V<sub>BE</sub> | I<sub>B</sub> = (V<sub>CC</sub>−V<sub>BE</sub>)/(R<sub>B</sub>+(β+1)R<sub>E</sub>), V<sub>E</sub> = I<sub>E</sub>R<sub>E</sub>, V<sub>B</sub> = V<sub>E</sub>+V<sub>BE</sub> |
+
+ทุกโหมด: I<sub>C</sub> = βI<sub>B</sub>, I<sub>E</sub> = (β+1)I<sub>B</sub>,
+V<sub>C</sub> = V<sub>CC</sub> − I<sub>C</sub>R<sub>C</sub>, V<sub>CE</sub> = V<sub>C</sub> − V<sub>E</sub>
+และเตือน (ไม่ error) เมื่อ I<sub>B</sub> ≤ 0 หรือ V<sub>CE</sub> ≤ 0.2 V
+
+- อินพุต: โหมดไบอัส + ค่าตามตาราง พร้อมเลือกหน่วย kΩ/MΩ
+- เอาต์พุต: I<sub>B</sub>, I<sub>C</sub>, I<sub>E</sub>, V<sub>B</sub>, V<sub>C</sub>, V<sub>E</sub>, V<sub>CE</sub> พร้อมหน่วย และผลต่างระหว่างสูตรตำรากับ nodal analysis
+- เอกสารผลตรวจ A1–A5 พร้อมภาพหลักฐาน: [`docs/validation.md`](docs/validation.md)
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python -m pip install -r requirements.txt
-.\.venv\Scripts\python app.py
+.\.venv\Scripts\python -m flask --app app run --port 5000
 ```
 
-เปิด `http://127.0.0.1:5000` แล้วกด "คำนวณ"
+เปิด `http://127.0.0.1:5000` แล้วเลือกโหมดและกด "Calculate DC Bias"
+(หากพอร์ต 5000 ถูกใช้อยู่ ให้เปลี่ยนเลขพอร์ต เช่น `--port 5002`)
 
-รันเทสทั้งหมด:
+รันเทสทั้งหมด (เทสต์เดิม 40 ตัว ไม่มีการแก้ไฟล์เทสต์):
 
 ```powershell
-.\.venv\Scripts\python -m pytest
+.\.venv\Scripts\python -m pytest -q
 ```
+
+### แหล่งโค้ดและความรับผิดชอบ
+
+- GitHub: <https://github.com/B6811549/Gitlab>
+- Commit โค้ดหลักของ Lab 03: `00e6ed4` (`fix: show active mode fields in the browser`)
+- ส่วนที่ AI ช่วย: ร่างสูตรและฟังก์ชัน `analyze_fixed_bias()` / `analyze_emitter_bias()` ใน `bjt.py`, การเลือกโหมดและแปลงหน่วยใน `app.py`, ปรับ `templates/index.html` (ฟอร์ม, SVG ต่อวงจรตามโหมด, การซ่อน/แสดงช่อง)
+- ส่วนที่นักศึกษาตรวจเอง: ค่าอ้างอิง A1–A5 คำนวณด้วยมือ, กรอกฟอร์มและอ่านผลผ่านเบราว์เซอร์จริง, ตรวจว่าโหมด Divider ให้ผลเดิม และโหมดไม่รู้จัก/อินพุตผิดแสดง error
