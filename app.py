@@ -20,25 +20,44 @@ DEFAULTS = {
     "r2": "22",
     "rc": "2.2",
     "re": "1.0",
+    "rb": "1000",
     "beta": "100",
     "vbe": "0.70",
 }
 
+BIAS_MODES = (
+    ("divider", "Voltage Divider Bias"),
+    ("fixed", "Fixed Bias"),
+    ("emitter", "Emitter Bias (single supply)"),
+)
+
+DEFAULT_BIAS_MODE = "divider"
+
 FIELD_META = (
     {"name": "vcc", "symbol": "V<sub>CC</sub>",
-     "caption": "Supply Voltage", "units": ("V",)},
+     "caption": "Supply Voltage", "units": ("V",),
+     "modes": ("divider", "fixed", "emitter")},
     {"name": "r1", "symbol": "R<sub>1</sub>",
-     "caption": "Upper Divider", "units": ("Ω", "kΩ")},
+     "caption": "Upper Divider", "units": ("Ω", "kΩ"),
+     "modes": ("divider",)},
     {"name": "r2", "symbol": "R<sub>2</sub>",
-     "caption": "Lower Divider", "units": ("Ω", "kΩ")},
+     "caption": "Lower Divider", "units": ("Ω", "kΩ"),
+     "modes": ("divider",)},
     {"name": "rc", "symbol": "R<sub>C</sub>",
-     "caption": "Collector Resistor", "units": ("Ω", "kΩ")},
+     "caption": "Collector Resistor", "units": ("Ω", "kΩ"),
+     "modes": ("divider", "fixed", "emitter")},
     {"name": "re", "symbol": "R<sub>E</sub>",
-     "caption": "Emitter Resistor", "units": ("Ω", "kΩ")},
+     "caption": "Emitter Resistor", "units": ("Ω", "kΩ"),
+     "modes": ("divider", "emitter")},
+    {"name": "rb", "symbol": "R<sub>B</sub>",
+     "caption": "Base Resistor", "units": ("Ω", "kΩ", "MΩ"),
+     "modes": ("fixed", "emitter")},
     {"name": "beta", "symbol": "β",
-     "caption": "Current Gain", "units": ("–",)},
+     "caption": "Current Gain", "units": ("–",),
+     "modes": ("divider", "fixed", "emitter")},
     {"name": "vbe", "symbol": "V<sub>BE</sub>",
-     "caption": "Base-Emitter Voltage", "units": ("V",)},
+     "caption": "Base-Emitter Voltage", "units": ("V",),
+     "modes": ("divider", "fixed", "emitter")},
 )
 
 UNIT_OPTIONS = {meta["name"]: meta["units"] for meta in FIELD_META}
@@ -48,9 +67,14 @@ DEFAULT_UNITS = {
     for meta in FIELD_META
 }
 
-RESISTORS = ("r1", "r2", "rc", "re")
+ALL_RESISTORS = ("r1", "r2", "rc", "re", "rb")
 
 EXTREME_MESSAGE = "ผลลัพธ์เกินขอบเขตที่คำนวณได้ กรุณาลดขนาดค่าอินพุต"
+
+
+def _mode_fields(bias_mode):
+    """Return the tuple of field names required for the given bias mode."""
+    return bjt.MODE_FIELDS.get(bias_mode, bjt.MODE_FIELDS["divider"])
 
 
 def _read_units(source):
@@ -72,18 +96,25 @@ def _read_units(source):
     return units
 
 
-def _apply_units(form, units):
+def _apply_units(form, units, fields):
     """Convert the display-unit form strings to SI values as strings.
 
-    kΩ is multiplied by 1000. Missing or unknown units are treated as Ω.
-    Non-numeric text passes through untouched so validation reports it.
+    kΩ and MΩ are multiplied by 1000 / 1e6. Missing or unknown units are
+    treated as Ω. Non-numeric text passes through untouched so validation
+    reports it. Only converts fields in ``fields``.
     """
     scaled = dict(form)
-    for field in RESISTORS:
+    for field in fields:
         text = (form.get(field) or "").strip()
-        if units.get(field) == "kΩ":
+        unit = units.get(field)
+        if unit == "kΩ":
             try:
                 scaled[field] = repr(float(text) * 1000)
+            except ValueError:
+                scaled[field] = text
+        elif unit == "MΩ":
+            try:
+                scaled[field] = repr(float(text) * 1_000_000)
             except ValueError:
                 scaled[field] = text
     return scaled
@@ -93,11 +124,15 @@ def _is_finite(point):
     return all(math.isfinite(value) for value in astuple(point))
 
 
-def _page(form, units, errors, result=None, independent=None,
+def _page(form, units, errors, bias_mode, result=None, independent=None,
           difference=None, agrees=None):
+    active_fields = set(_mode_fields(bias_mode))
     return render_template(
         "index.html",
         fields=FIELD_META,
+        bias_modes=BIAS_MODES,
+        bias_mode=bias_mode,
+        active_fields=active_fields,
         form=form,
         units=units,
         errors=errors,
@@ -109,22 +144,36 @@ def _page(form, units, errors, result=None, independent=None,
     )
 
 
-def _render_page(form, units, errors, values):
+def _render_page(form, units, errors, bias_mode, values):
     if errors:
-        return _page(form, units, errors), 400
+        return _page(form, units, errors, bias_mode), 400
 
     try:
-        result = bjt.analyze_ce_bias(**values)
-        independent = bjt.solve_nodal(**values)
+        if bias_mode == "divider":
+            result = bjt.analyze_ce_bias(**values)
+            independent = bjt.solve_nodal(**values)
+        elif bias_mode == "fixed":
+            result = bjt.analyze_fixed_bias(**values)
+            independent = None
+        elif bias_mode == "emitter":
+            result = bjt.analyze_emitter_bias(**values)
+            independent = None
+        else:
+            return _page(form, units, {"_form": "โหมดไบอัสไม่รู้จัก"}, bias_mode), 400
     except (ValueError, ZeroDivisionError, OverflowError):
-        return _page(form, units, {"_form": EXTREME_MESSAGE}), 400
+        return _page(form, units, {"_form": EXTREME_MESSAGE}, bias_mode), 400
 
-    if not (_is_finite(result.point) and _is_finite(independent)):
-        return _page(form, units, {"_form": EXTREME_MESSAGE}), 400
+    if not _is_finite(result.point):
+        return _page(form, units, {"_form": EXTREME_MESSAGE}, bias_mode), 400
 
-    difference = bjt.compare_operating_points(result.point, independent)
-    return _page(form, units, {}, result, independent, difference,
-                 difference <= bjt.CHECK_TOLERANCE)
+    difference = None
+    agrees = None
+    if independent is not None and _is_finite(independent):
+        difference = bjt.compare_operating_points(result.point, independent)
+        agrees = difference <= bjt.CHECK_TOLERANCE
+
+    return _page(form, units, {}, bias_mode, result, independent,
+                 difference, agrees)
 
 
 @app.template_filter("current")
@@ -145,16 +194,30 @@ def format_voltage(volts):
 
 @app.get("/")
 def index():
-    values, errors = bjt.validate_inputs(_apply_units(DEFAULTS, DEFAULT_UNITS))
-    return _render_page(DEFAULTS, DEFAULT_UNITS, errors, values)
+    bias_mode = request.args.get("bias_mode", DEFAULT_BIAS_MODE)
+    if bias_mode not in dict(BIAS_MODES):
+        bias_mode = DEFAULT_BIAS_MODE
+    fields = _mode_fields(bias_mode)
+    defaults_subset = {k: DEFAULTS[k] for k in fields}
+    units_subset = {k: DEFAULT_UNITS[k] for k in fields}
+    values, errors = bjt.validate_inputs(
+        _apply_units(defaults_subset, units_subset, fields), fields)
+    return _render_page(defaults_subset, units_subset, errors, bias_mode, values)
 
 
 @app.post("/")
 def calculate():
-    form = {field: request.form.get(field, "") for field in bjt.FIELDS}
+    bias_mode = request.form.get("bias_mode", DEFAULT_BIAS_MODE)
+    if bias_mode not in dict(BIAS_MODES):
+        bias_mode = DEFAULT_BIAS_MODE
+    fields = _mode_fields(bias_mode)
+    form = {field: request.form.get(field, "") for field in fields}
+    form["bias_mode"] = bias_mode
     units = _read_units(request.form)
-    values, errors = bjt.validate_inputs(_apply_units(form, units))
-    return _render_page(form, units, errors, values)
+    units_subset = {k: units[k] for k in fields if k in units}
+    scaled = _apply_units(form, units_subset, fields)
+    values, errors = bjt.validate_inputs(scaled, fields)
+    return _render_page(form, units_subset, errors, bias_mode, values)
 
 
 if __name__ == "__main__":

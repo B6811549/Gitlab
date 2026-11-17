@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lab 02: BJT DC Bias Web App — ENG29 2121</title>
+  <title>Lab 03: BJT DC Bias Web App — ENG29 2121</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -21,8 +21,8 @@
         </svg>
       </span>
       <div>
-        <h1>Lab 02: BJT DC Bias Web App</h1>
-        <p>ENG29 2121 – Common Emitter (Voltage Divider Bias)</p>
+        <h1>Lab 03: BJT DC Bias Web App</h1>
+        <p>ENG29 2121 – Common Emitter (Fixed / Emitter / Voltage Divider)</p>
       </div>
     </div>
     <span class="course">
@@ -49,7 +49,7 @@
                      A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83
                      l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09
                      a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83
-                     l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09
+                     l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0-4h-.09
                      a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
         </span>
@@ -57,8 +57,28 @@
       </h2>
 
       <form method="post" action="{{ url_for('calculate') }}">
+        <!-- Bias mode selector -->
+        <div class="field-row mode-row">
+          <label for="bias_mode">
+            <span class="symbol">Mode</span>
+            <span class="caption">เลือกวงจรไบอัส</span>
+          </label>
+          <div class="control">
+            <select id="bias_mode" name="bias_mode" onchange="this.form.submit()">
+              {% for mode_id, mode_label in bias_modes %}
+                <option value="{{ mode_id }}"
+                        {% if bias_mode == mode_id %}selected{% endif %}>
+                  {{ mode_label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
         {% for field in fields %}
-          <div class="field-row">
+          <div class="field-row"
+               data-modes="{{ field.modes | join(',') }}"
+               {% if field.name not in active_fields %}style="display:none"{% endif %}>
             <label for="{{ field.name }}">
               <span class="symbol">{{ field.symbol|safe }}</span>
               <span class="caption">({{ field.caption }})</span>
@@ -116,6 +136,7 @@
         <circle cx="180" cy="70" r="3.5" class="node-dot"/>
         <text x="192" y="52" class="node-label">V<tspan baseline-shift="sub" font-size="0.7em">CC</tspan> = {{ form.vcc }} {{ units.vcc }}</text>
 
+        {% if bias_mode == "divider" %}
         <!-- R1 -->
         <line x1="110" y1="70" x2="110" y2="95" class="wire"/>
         <rect x="102" y="95" width="16" height="55" class="res"/>
@@ -143,16 +164,39 @@
         <line x1="250" y1="190" x2="205" y2="190" class="wire"/>
         <line x1="205" y1="190" x2="205" y2="207" class="wire"/>
 
-        <!-- transistor -->
-        <line x1="110" y1="235" x2="163" y2="235" class="wire"/>
-        <circle cx="185" cy="235" r="32" class="device"/>
-        <line x1="163" y1="215" x2="163" y2="255" class="base-bar"/>
-        <line x1="163" y1="224" x2="205" y2="207" class="wire"/>
-        <line x1="163" y1="246" x2="205" y2="263" class="wire"/>
-        <polygon points="196,255 206,264 194,266" class="arrow"/>
-        <text x="224" y="226" class="part">Q<tspan baseline-shift="sub" font-size="0.7em">1</tspan></text>
-        <text x="224" y="242" class="value">NPN</text>
-        <text x="224" y="258" class="value">(β = {{ form.beta }})</text>
+        {% elif bias_mode == "fixed" %}
+        <!-- RB from VCC to Base -->
+        <line x1="180" y1="70" x2="180" y2="95" class="wire"/>
+        <rect x="172" y="95" width="16" height="55" class="res"/>
+        <text x="200" y="112" class="part">R<tspan baseline-shift="sub" font-size="0.7em">B</tspan></text>
+        <text x="200" y="128" class="value">{{ form.rb }} {{ units.rb }}</text>
+        <line x1="180" y1="150" x2="180" y2="235" class="wire"/>
+
+        <!-- RC -->
+        <line x1="250" y1="70" x2="250" y2="95" class="wire"/>
+        <rect x="242" y="95" width="16" height="55" class="res"/>
+        <text x="268" y="112" class="part">R<tspan baseline-shift="sub" font-size="0.7em">C</tspan></text>
+        <text x="268" y="128" class="value">{{ form.rc }} {{ units.rc }}</text>
+        <line x1="250" y1="150" x2="250" y2="190" class="wire"/>
+        <line x1="250" y1="190" x2="205" y2="190" class="wire"/>
+        <line x1="205" y1="190" x2="205" y2="207" class="wire"/>
+
+        {% elif bias_mode == "emitter" %}
+        <!-- RB from VCC to Base -->
+        <line x1="180" y1="70" x2="180" y2="95" class="wire"/>
+        <rect x="172" y="95" width="16" height="55" class="res"/>
+        <text x="200" y="112" class="part">R<tspan baseline-shift="sub" font-size="0.7em">B</tspan></text>
+        <text x="200" y="128" class="value">{{ form.rb }} {{ units.rb }}</text>
+        <line x1="180" y1="150" x2="180" y2="235" class="wire"/>
+
+        <!-- RC -->
+        <line x1="250" y1="70" x2="250" y2="95" class="wire"/>
+        <rect x="242" y="95" width="16" height="55" class="res"/>
+        <text x="268" y="112" class="part">R<tspan baseline-shift="sub" font-size="0.7em">C</tspan></text>
+        <text x="268" y="128" class="value">{{ form.rc }} {{ units.rc }}</text>
+        <line x1="250" y1="150" x2="250" y2="190" class="wire"/>
+        <line x1="250" y1="190" x2="205" y2="190" class="wire"/>
+        <line x1="205" y1="190" x2="205" y2="207" class="wire"/>
 
         <!-- RE -->
         <line x1="205" y1="263" x2="250" y2="263" class="wire"/>
@@ -164,6 +208,41 @@
         <line x1="232" y1="355" x2="268" y2="355" class="wire"/>
         <line x1="239" y1="361" x2="261" y2="361" class="wire"/>
         <line x1="245" y1="367" x2="255" y2="367" class="wire"/>
+        {% endif %}
+
+        <!-- base node connection -->
+        <line x1="180" y1="235" x2="163" y2="235" class="wire"/>
+        <circle cx="185" cy="235" r="32" class="device"/>
+        <line x1="163" y1="215" x2="163" y2="255" class="base-bar"/>
+        <line x1="163" y1="224" x2="205" y2="207" class="wire"/>
+        <line x1="163" y1="246" x2="205" y2="263" class="wire"/>
+        <polygon points="196,255 206,264 194,266" class="arrow"/>
+        <text x="224" y="226" class="part">Q<tspan baseline-shift="sub" font-size="0.7em">1</tspan></text>
+        <text x="224" y="242" class="value">NPN</text>
+        <text x="224" y="258" class="value">(β = {{ form.beta }})</text>
+
+        {% if bias_mode != "fixed" %}
+        <!-- RE to ground (Divider and Emitter) -->
+        <line x1="205" y1="263" x2="250" y2="263" class="wire"/>
+        <line x1="250" y1="263" x2="250" y2="275" class="wire"/>
+        {% if bias_mode == "emitter" %}
+        {% else %}
+        <!-- Divider RE -->
+        <rect x="242" y="275" width="16" height="55" class="res"/>
+        <text x="268" y="292" class="part">R<tspan baseline-shift="sub" font-size="0.7em">E</tspan></text>
+        <text x="268" y="308" class="value">{{ form.re }} {{ units.re }}</text>
+        {% endif %}
+        <line x1="250" y1="330" x2="250" y2="355" class="wire"/>
+        <line x1="232" y1="355" x2="268" y2="355" class="wire"/>
+        <line x1="239" y1="361" x2="261" y2="361" class="wire"/>
+        <line x1="245" y1="367" x2="255" y2="367" class="wire"/>
+        {% endif %}
+
+        <!-- Ground -->
+        <line x1="105" y1="367" x2="255" y2="367" class="wire"/>
+        <line x1="180" y1="355" x2="180" y2="370" class="wire"/>
+        <line x1="175" y1="370" x2="185" y2="370" class="wire"/>
+        <line x1="178" y1="373" x2="182" y2="373" class="wire"/>
       </svg>
     </section>
 
@@ -179,6 +258,7 @@
       </h2>
 
       {% if result %}
+        <p class="result-mode">โหมด: <strong>{{ bias_mode }}</strong></p>
         <table class="results">
           <tbody>
             <tr><th>V<sub>B</sub></th><td>{{ result.point.vb_v|voltage }}</td></tr>
@@ -219,7 +299,7 @@
 
   </main>
 
-  {% if result %}
+  {% if result and independent is not none %}
     <section class="crosscheck">
       <span class="crosscheck-title">
         <span aria-hidden="true">✓</span>
@@ -236,6 +316,31 @@
       </div>
     </section>
   {% endif %}
+
+  <script>
+    function mode_fields(mode) {
+      const modeMap = {
+        divider: ['vcc', 'r1', 'r2', 'rc', 're', 'beta', 'vbe'],
+        fixed: ['vcc', 'rb', 'rc', 'beta', 'vbe'],
+        emitter: ['vcc', 'rb', 'rc', 're', 'beta', 'vbe'],
+      };
+      return new Set(modeMap[mode] || modeMap.divider);
+    }
+
+    function updateFieldVisibility() {
+      const select = document.getElementById('bias_mode');
+      if (!select) return;
+      const active = mode_fields(select.value);
+      document.querySelectorAll('.field-row[data-modes]').forEach(row => {
+        const modes = row.getAttribute('data-modes').split(',');
+        const show = modes.some(m => active.has(m));
+        row.style.display = show ? '' : 'none';
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', updateFieldVisibility);
+    document.getElementById('bias_mode')?.addEventListener('change', updateFieldVisibility);
+  </script>
 
 </div>
 </body>

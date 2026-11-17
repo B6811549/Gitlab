@@ -10,17 +10,25 @@ from typing import Mapping
 
 FIELDS = ("vcc", "r1", "r2", "rc", "re", "beta", "vbe")
 
+# ฟิลด์ที่จำเป็นสำหรับแต่ละโหมดไบอัส (ใช้สำหรับตรวจอินพุตเฉพาะโหมดนั้น)
+MODE_FIELDS = {
+    "divider": ("vcc", "r1", "r2", "rc", "re", "beta", "vbe"),
+    "fixed": ("vcc", "rb", "rc", "beta", "vbe"),
+    "emitter": ("vcc", "rb", "rc", "re", "beta", "vbe"),
+}
+
 LABELS = {
     "vcc": "VCC (Supply Voltage)",
     "r1": "R1 (Upper Divider)",
     "r2": "R2 (Lower Divider)",
     "rc": "RC (Collector Resistor)",
     "re": "RE (Emitter Resistor)",
+    "rb": "RB (Base Resistor)",
     "beta": "beta (Current Gain)",
     "vbe": "VBE (Base-Emitter Voltage)",
 }
 
-_RESISTORS = ("r1", "r2", "rc", "re")
+_RESISTORS = ("r1", "r2", "rc", "re", "rb")
 
 VCE_SAT = 0.2
 
@@ -35,17 +43,20 @@ def _symbol(field):
     return LABELS[field].split(" ", 1)[0]
 
 
-def validate_inputs(raw: Mapping[str, str]):
+def validate_inputs(raw: Mapping[str, str], fields: tuple[str, ...] = FIELDS):
     """Parse and validate raw form strings.
 
     Returns ``(values, errors)`` where ``values`` maps field names to floats
     and ``errors`` maps field names to Thai messages. An empty ``errors``
     dict means the input is valid.
+
+    ``fields`` limits which fields are parsed and validated, so each bias
+    mode only requires the resistors it actually uses.
     """
     values = {}
     errors = {}
 
-    for field in FIELDS:
+    for field in fields:
         text = (raw.get(field) or "").strip()
         try:
             value = float(text)
@@ -116,6 +127,52 @@ def analyze_ce_bias(*, vcc, r1, r2, rc, re, beta, vbe) -> BiasResult:
     ic = beta * ib
     ie = (beta + 1) * ib
     vb = vbb - ib * rb
+    vc = vcc - ic * rc
+    ve = ie * re
+    vce = vc - ve
+
+    region = classify_region(ib, vce)
+    warnings = (SATURATION_WARNING,) if region == "saturation" else ()
+    point = OperatingPoint(ib, ic, ie, vb, vc, ve, vce)
+    return BiasResult(point, region, warnings)
+
+
+def analyze_fixed_bias(*, vcc, rb, rc, beta, vbe) -> BiasResult:
+    """Fixed bias analysed with the textbook approximation.
+
+    Circuit: RB from VCC to Base, Emitter tied directly to ground.
+    Only VCC, RB, RC, beta and VBE are required.
+    """
+    ib = (vcc - vbe) / rb
+    if ib <= 0:
+        return BiasResult(_cutoff_point(vcc, vbe), "cutoff", (CUTOFF_WARNING,))
+
+    ic = beta * ib
+    ie = (beta + 1) * ib
+    vb = vbe
+    vc = vcc - ic * rc
+    ve = 0.0
+    vce = vc - ve
+
+    region = classify_region(ib, vce)
+    warnings = (SATURATION_WARNING,) if region == "saturation" else ()
+    point = OperatingPoint(ib, ic, ie, vb, vc, ve, vce)
+    return BiasResult(point, region, warnings)
+
+
+def analyze_emitter_bias(*, vcc, rb, rc, re, beta, vbe) -> BiasResult:
+    """Emitter bias (single supply) analysed with the textbook approximation.
+
+    Circuit: RB from VCC to Base, RE from Emitter to ground.
+    Requires VCC, RB, RC, RE, beta and VBE.
+    """
+    ib = (vcc - vbe) / (rb + (beta + 1) * re)
+    if ib <= 0:
+        return BiasResult(_cutoff_point(vcc, vbe), "cutoff", (CUTOFF_WARNING,))
+
+    ic = beta * ib
+    ie = (beta + 1) * ib
+    vb = vbe + ie * re
     vc = vcc - ic * rc
     ve = ie * re
     vce = vc - ve
