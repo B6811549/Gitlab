@@ -84,7 +84,7 @@ def _read_units(source):
     partial form posts keep their physical meaning.
     """
     units = {}
-    for field in bjt.FIELDS:
+    for field in UNIT_OPTIONS:
         allowed = UNIT_OPTIONS[field]
         posted = source.get(f"{field}_unit")
         if posted in allowed:
