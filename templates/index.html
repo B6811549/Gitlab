@@ -102,7 +102,9 @@
         {% endfor %}
 
         {% if errors.get("_form") %}
-          <p class="form-error" role="alert">{{ errors["_form"] }}</p>
+          <p class="form-error" role="alert">{{ bias_mode_label }}: {{ errors["_form"] }}</p>
+        {% elif errors %}
+          <p class="result-mode">โหมด: <strong>{{ bias_mode_label }}</strong></p>
         {% endif %}
 
         <button type="submit">
@@ -182,6 +184,10 @@
         <line x1="250" y1="190" x2="205" y2="190" class="wire"/>
         <line x1="205" y1="190" x2="205" y2="207" class="wire"/>
 
+        <!-- Emitter tied directly to ground -->
+        <line x1="205" y1="263" x2="205" y2="367" class="wire"/>
+        <circle cx="205" cy="367" r="3.5" class="node-dot"/>
+
         {% elif bias_mode == "emitter" %}
         <!-- RB from VCC to Base -->
         <line x1="180" y1="70" x2="180" y2="95" class="wire"/>
@@ -212,7 +218,11 @@
         {% endif %}
 
         <!-- base node connection -->
+        {% if bias_mode == "divider" %}
+        <line x1="110" y1="235" x2="163" y2="235" class="wire"/>
+        {% else %}
         <line x1="180" y1="235" x2="163" y2="235" class="wire"/>
+        {% endif %}
         <circle cx="185" cy="235" r="32" class="device"/>
         <line x1="163" y1="215" x2="163" y2="255" class="base-bar"/>
         <line x1="163" y1="224" x2="205" y2="207" class="wire"/>
@@ -222,17 +232,13 @@
         <text x="224" y="242" class="value">NPN</text>
         <text x="224" y="258" class="value">(β = {{ form.beta }})</text>
 
-        {% if bias_mode != "fixed" %}
-        <!-- RE to ground (Divider and Emitter) -->
+        {% if bias_mode == "divider" %}
+        <!-- Divider RE to ground -->
         <line x1="205" y1="263" x2="250" y2="263" class="wire"/>
         <line x1="250" y1="263" x2="250" y2="275" class="wire"/>
-        {% if bias_mode == "emitter" %}
-        {% else %}
-        <!-- Divider RE -->
         <rect x="242" y="275" width="16" height="55" class="res"/>
         <text x="268" y="292" class="part">R<tspan baseline-shift="sub" font-size="0.7em">E</tspan></text>
         <text x="268" y="308" class="value">{{ form.re }} {{ units.re }}</text>
-        {% endif %}
         <line x1="250" y1="330" x2="250" y2="355" class="wire"/>
         <line x1="232" y1="355" x2="268" y2="355" class="wire"/>
         <line x1="239" y1="361" x2="261" y2="361" class="wire"/>
@@ -259,7 +265,7 @@
       </h2>
 
       {% if result %}
-        <p class="result-mode">โหมด: <strong>{{ bias_mode }}</strong></p>
+        <p class="result-mode">โหมด: <strong>{{ bias_mode_label }}</strong></p>
         <table class="results">
           <tbody>
             <tr><th>V<sub>B</sub></th><td>{{ result.vb_v|voltage }}</td></tr>
