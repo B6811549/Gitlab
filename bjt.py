@@ -103,6 +103,23 @@ class BiasResult:
     warnings: tuple[str, ...]
 
 
+def as_dict(result: BiasResult, bias_mode: str) -> dict:
+    """Return the shared Flask-facing result contract (mA and V)."""
+    point = result.point
+    return {
+        "bias_mode": bias_mode,
+        "ib_ma": point.ib_a * 1e3,
+        "ic_ma": point.ic_a * 1e3,
+        "ie_ma": point.ie_a * 1e3,
+        "vb_v": point.vb_v,
+        "ve_v": point.ve_v,
+        "vc_v": point.vc_v,
+        "vce_v": point.vce_v,
+        "region": result.region,
+        "warnings": list(result.warnings),
+    }
+
+
 def classify_region(ib_a: float, vce_v: float) -> str:
     if ib_a <= 0:
         return "cutoff"

@@ -181,7 +181,8 @@ def _render_page(form, units, errors, bias_mode, values):
         difference = bjt.compare_operating_points(result.point, independent)
         agrees = difference <= bjt.CHECK_TOLERANCE
 
-    return _page(form, units, {}, bias_mode, result, independent,
+    return _page(form, units, {}, bias_mode,
+                 bjt.as_dict(result, bias_mode), independent,
                  difference, agrees)
 
 
@@ -194,6 +195,11 @@ def format_current(amps):
     if amps == 0:
         return "0.0 µA"
     return f"{amps * 1e9:.1f} nA"
+
+
+@app.template_filter("current_ma")
+def format_current_ma(milliamp):
+    return format_current(milliamp / 1e3)
 
 
 @app.template_filter("voltage")

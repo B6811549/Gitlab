@@ -262,13 +262,13 @@
         <p class="result-mode">โหมด: <strong>{{ bias_mode }}</strong></p>
         <table class="results">
           <tbody>
-            <tr><th>V<sub>B</sub></th><td>{{ result.point.vb_v|voltage }}</td></tr>
-            <tr><th>V<sub>E</sub></th><td>{{ result.point.ve_v|voltage }}</td></tr>
-            <tr><th>V<sub>C</sub></th><td>{{ result.point.vc_v|voltage }}</td></tr>
-            <tr><th>V<sub>CE</sub></th><td>{{ result.point.vce_v|voltage }}</td></tr>
-            <tr><th>I<sub>B</sub></th><td>{{ result.point.ib_a|current }}</td></tr>
-            <tr><th>I<sub>C</sub></th><td>{{ result.point.ic_a|current }}</td></tr>
-            <tr><th>I<sub>E</sub></th><td>{{ result.point.ie_a|current }}</td></tr>
+            <tr><th>V<sub>B</sub></th><td>{{ result.vb_v|voltage }}</td></tr>
+            <tr><th>V<sub>E</sub></th><td>{{ result.ve_v|voltage }}</td></tr>
+            <tr><th>V<sub>C</sub></th><td>{{ result.vc_v|voltage }}</td></tr>
+            <tr><th>V<sub>CE</sub></th><td>{{ result.vce_v|voltage }}</td></tr>
+            <tr><th>I<sub>B</sub></th><td>{{ result.ib_ma|current_ma }}</td></tr>
+            <tr><th>I<sub>C</sub></th><td>{{ result.ic_ma|current_ma }}</td></tr>
+            <tr><th>I<sub>E</sub></th><td>{{ result.ie_ma|current_ma }}</td></tr>
           </tbody>
         </table>
 
@@ -279,11 +279,11 @@
           <div>
             {% if result.region == 'active' %}
               <strong>Active region approximation OK <span class="region-tag">(ACTIVE)</span></strong>
-              <p>V<sub>CE</sub> = {{ result.point.vce_v|voltage }} &gt;
+              <p>V<sub>CE</sub> = {{ result.vce_v|voltage }} &gt;
                  {{ '%.1f'|format(vce_sat) }} V (transistor in active region)</p>
             {% elif result.region == 'saturation' %}
               <strong>Saturation region — model limit <span class="region-tag">(SATURATION)</span></strong>
-              <p>V<sub>CE</sub> = {{ result.point.vce_v|voltage }} ≤
+              <p>V<sub>CE</sub> = {{ result.vce_v|voltage }} ≤
                  {{ '%.1f'|format(vce_sat) }} V (transistor in saturation)</p>
             {% else %}
               <strong>Cutoff region — transistor off <span class="region-tag">(CUTOFF)</span></strong>
