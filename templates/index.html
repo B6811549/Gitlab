@@ -64,7 +64,8 @@
             <span class="caption">เลือกวงจรไบอัส</span>
           </label>
           <div class="control">
-            <select id="bias_mode" name="bias_mode" onchange="this.form.submit()">
+            <select id="bias_mode" name="bias_mode"
+                    onchange="window.location='?bias_mode='+encodeURIComponent(this.value)">
               {% for mode_id, mode_label in bias_modes %}
                 <option value="{{ mode_id }}"
                         {% if bias_mode == mode_id %}selected{% endif %}>

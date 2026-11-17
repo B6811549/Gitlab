@@ -144,6 +144,15 @@ def _page(form, units, errors, bias_mode, result=None, independent=None,
     )
 
 
+def _unknown_mode_page():
+    """Return the default Divider form with 400; never calculate a guess."""
+    fields = _mode_fields(DEFAULT_BIAS_MODE)
+    form = {k: DEFAULTS[k] for k in fields}
+    units = {k: DEFAULT_UNITS[k] for k in fields}
+    return _page(form, units, {"_form": "โหมดไบอัสไม่รู้จัก"},
+                 DEFAULT_BIAS_MODE), 400
+
+
 def _render_page(form, units, errors, bias_mode, values):
     if errors:
         return _page(form, units, errors, bias_mode), 400
@@ -196,7 +205,7 @@ def format_voltage(volts):
 def index():
     bias_mode = request.args.get("bias_mode", DEFAULT_BIAS_MODE)
     if bias_mode not in dict(BIAS_MODES):
-        bias_mode = DEFAULT_BIAS_MODE
+        return _unknown_mode_page()
     fields = _mode_fields(bias_mode)
     defaults_subset = {k: DEFAULTS[k] for k in fields}
     units_subset = {k: DEFAULT_UNITS[k] for k in fields}
@@ -209,7 +218,7 @@ def index():
 def calculate():
     bias_mode = request.form.get("bias_mode", DEFAULT_BIAS_MODE)
     if bias_mode not in dict(BIAS_MODES):
-        bias_mode = DEFAULT_BIAS_MODE
+        return _unknown_mode_page()
     fields = _mode_fields(bias_mode)
     form = {field: request.form.get(field, "") for field in fields}
     form["bias_mode"] = bias_mode
