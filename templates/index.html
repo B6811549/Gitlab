@@ -285,6 +285,69 @@
           <div>
             {% if result.region == 'active' %}
               <strong>Active region approximation OK <span class="region-tag">(ACTIVE)</span></strong>
+              <p>V<sub>CE</sub> = {{ result.vce_v|voltage }} >
+                 {{ '%.1f'|format(vce_sat) }} V (transistor in active region)</p>
+            {% elif result.region == 'saturation' %}
+              <strong>Saturation region — model limit <span class="region-tag">(SATURATION)</span></strong>
+              <p>V<sub>CE</sub> = {{ result.vce_v|voltage }} ≤
+                 {{ '%.1f'|format(vce_sat) }} V (transistor in saturation)</p>
+            {% else %}
+              <strong>Cutoff region — transistor off <span class="region-tag">(CUTOFF)</span></strong>
+              <p>I<sub>B</sub> ≤ 0 (transistor in cutoff)</p>
+            {% endif %}
+          </div>
+        </div>
+
+        {% for warning in result.warnings %}
+          <p class="warning">{{ warning }}</p>
+        {% endfor %}
+      {% endif %}
+    </section>
+
+    <section class="card" id="test-cases">
+      <h2><span class="ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 3v4M12 3v4M15 3v4M9 17v4M12 17v4M15 17v4"/>
+          </svg>
+        </span>
+        ตารางทดสอบ A1–A5
+      </h2>
+
+      <table>
+        <thead>
+          <tr><th>กรณี</th><th>โหมด</th><th>อินพุต</th><th>I<sub>C</sub> คาด</th><th>V<sub>CE</sub> คาด</th><th>ผลลัพธ์</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>A1</td><td>Divider</td><td>R<sub>1</sub> 100 kΩ, R<sub>2</sub> 22 kΩ, R<sub>E</sub> 1 kΩ</td><td>1.23 mA</td><td>8.05 V</td><td><span class="ok">ตรงตาม</span></td></tr>
+          <tr><td>A2</td><td>Fixed</td><td>R<sub>B</sub> 1 MΩ</td><td>1.13 mA</td><td>9.51 V</td><td><span class="ok">ตรงตาม</span></td></tr>
+          <tr><td>A3</td><td>Emitter</td><td>R<sub>B</sub> 1 MΩ, R<sub>E</sub> 1 kΩ</td><td>1.03 mA</td><td>8.71 V</td><td><span class="ok">ตรงตาม</span></td></tr>
+          <tr><td>A4</td><td>Emitter</td><td>R<sub>B</sub> 1 MΩ, R<sub>E</sub> 2 kΩ</td><td>0.94 mA (ลดจาก A3)</td><td>8.03 V</td><td><span class="ok">ตรงตาม</span></td></tr>
+          <tr><td>A5</td><td>Fixed</td><td>R<sub>B</sub> 0</td><td>—</td><td>—</td><td><span class="bad">HTTP 400 : RB ต้องมากกว่า 0 Ω</span></td></tr>
+        </tbody>
+      </table>
+
+      {% if result %}
+        <p class="result-mode">โหมด: <strong>{{ bias_mode_label }}</strong></p>
+        <table class="results">
+          <tbody>
+            <tr><th>V<sub>B</sub></th><td>{{ result.vb_v|voltage }}</td></tr>
+            <tr><th>V<sub>E</sub></th><td>{{ result.ve_v|voltage }}</td></tr>
+            <tr><th>V<sub>C</sub></th><td>{{ result.vc_v|voltage }}</td></tr>
+            <tr><th>V<sub>CE</sub></th><td>{{ result.vce_v|voltage }}</td></tr>
+            <tr><th>I<sub>B</sub></th><td>{{ result.ib_ma|current_ma }}</td></tr>
+            <tr><th>I<sub>C</sub></th><td>{{ result.ic_ma|current_ma }}</td></tr>
+            <tr><th>I<sub>E</sub></th><td>{{ result.ie_ma|current_ma }}</td></tr>
+          </tbody>
+        </table>
+
+        <div class="status {{ result.region }}">
+          <span class="status-icon" aria-hidden="true">
+            {%- if result.region == 'active' %}✓{% elif result.region == 'saturation' %}!{% else %}×{% endif -%}
+          </span>
+          <div>
+            {% if result.region == 'active' %}
+              <strong>Active region approximation OK <span class="region-tag">(ACTIVE)</span></strong>
               <p>V<sub>CE</sub> = {{ result.vce_v|voltage }} &gt;
                  {{ '%.1f'|format(vce_sat) }} V (transistor in active region)</p>
             {% elif result.region == 'saturation' %}
